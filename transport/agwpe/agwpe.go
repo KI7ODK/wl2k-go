@@ -12,6 +12,7 @@ const (
 	AGWMaxCallLen  = 9                // Max callsign-ssid length in bytes
 	MinAGWMajorVer = 2000             // Minimum supported major version
 	MinAGWMinorVer = 78               // Minimum supported minior version
+
 )
 
 const (

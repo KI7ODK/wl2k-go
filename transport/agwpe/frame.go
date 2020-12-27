@@ -30,7 +30,7 @@ type AGWFrame struct {
 	data   []byte
 }
 
-func makeFrame(port uint8, fType datakind, callFrom string, callTo string, data []byte) AGWFrame {
+func makeFrame(port uint8, fType datakind, callFrom string, callTo string, data []byte) ([]byte, error) {
 	// Set PID
 	var pid uint8
 	switch fType {
@@ -41,7 +41,7 @@ func makeFrame(port uint8, fType datakind, callFrom string, callTo string, data 
 	}
 
 	// Put info into frame struct
-	return AGWFrame{
+	frame := AGWFrame{
 		header: AGWHeader{
 			port:       port,
 			fType:      fType,
@@ -52,12 +52,14 @@ func makeFrame(port uint8, fType datakind, callFrom string, callTo string, data 
 		},
 		data: data,
 	}
+
+	return encodeFrame(frame)
 }
 
 func encodeFrame(f AGWFrame) ([]byte, error) {
 	// Check data length (do we need/should we have this check? Does AGWPE handle longer packets?)
 	if f.header.dataLength > AX25MaxLen && f.header.fType != AGWLogin {
-		return nil, errors.New("Data length exceeds AX.25 frame cap")
+		return nil, errors.New("Error encoding frame: Data length exceeds AX.25 frame cap")
 	}
 
 	// Make byte slice for frame
@@ -71,11 +73,11 @@ func encodeFrame(f AGWFrame) ([]byte, error) {
 
 	// Copy callsigns into frame
 	if n := copy(frame[8:], f.header.callFrom); n > AGWMaxCallLen {
-		return nil, fmt.Errorf("Callsign %s exceeds allowed length", f.header.callFrom)
+		return nil, fmt.Errorf("Error encoding frame: Callsign %s exceeds allowed length", f.header.callFrom)
 	}
 
 	if n := copy(frame[18:], f.header.callTo); n > AGWMaxCallLen {
-		return nil, fmt.Errorf("Callsign %s exceeds allowed length", f.header.callTo)
+		return nil, fmt.Errorf("Error encoding frame: Callsign %s exceeds allowed length", f.header.callTo)
 	}
 
 	// Put data length into frame
@@ -84,7 +86,7 @@ func encodeFrame(f AGWFrame) ([]byte, error) {
 	// Copy data into frame
 	if f.header.dataLength > 0 {
 		if n := copy(frame[AGWHeaderLen:], f.data); n != int(f.header.dataLength) {
-			return nil, errors.New("Data length does not match length declared in header")
+			return nil, errors.New("Error encoding frame: Data length does not match length declared in header")
 		}
 	}
 
